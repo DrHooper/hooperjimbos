@@ -1,0 +1,12 @@
+{
+	"id": "hooperjokers",
+	"name": "Hooper's Jimbos",
+	"author": ["Hooper"],
+	"description": "Jokers designed with the vanilla Balatro experienced.",
+	"prefix": "hoopermod",
+	"main_file": "HooperJimbos.lua",
+	"priority": 0,
+	"badge_colour": "FFA8FF",
+	"badge_text_colour": "FFA8FF",
+	"version": "1.0.0"
+}
