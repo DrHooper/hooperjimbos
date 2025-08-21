@@ -363,29 +363,28 @@ SMODS.Joker {
 }
 
 SMODS.Joker {
-	key = 'new_joker',
+	key = 'shooting_star',
 	loc_txt = {
-		name = 'new Joker',
+		name = 'Shooting Star',
 		text = {
-			"placeholder"
+			"money for using planet"
 		}
 	},
 	blueprint_compat = true,
-	config = { extra = { } },
+	config = { extra = { dollars = 1 } },
 	rarity = 1,
 	atlas = 'HooperJimbos',
 	pos = { x = 4, y = 0 },
-	cost = 8,
+	cost = 4,
 
 	-- #1# in the description takes from the nth var in loc_vars
     loc_vars = function(self, info_queue, card)
-        
+        return { vars = { card.ability.extra.dollars } }
     end,
 
 	calculate = function(self, card, context)
-		
+		if context.using_consumeable and context.consumeable.ability.set == 'Planet' then
+			return{dollars = card.ability.extra.dollars}
+		end
 	end
 }
-
-
-			
