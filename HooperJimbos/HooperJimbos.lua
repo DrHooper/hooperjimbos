@@ -14,7 +14,7 @@ local msg_dictionary={
     a_sold_tally="#1#/#2# Sold",
     a_xmult="X#1# Mult",
     a_xmult_minus="-X#1# Mult",
-}    
+}
 
 SMODS.Atlas {
 	-- Key for code to find it with
@@ -34,7 +34,7 @@ SMODS.Joker {
 	loc_txt = {
 		name = 'Binary Satellites',
 		text = {
-			"Retrigger {C:planet}planet{} cards"
+			"Retrigger {C:planet}Planet{} cards"
 		}
 	},
 	-- BP and BS compatable
@@ -49,7 +49,7 @@ SMODS.Joker {
 	-- loc_vars gives your loc_text variables to work with, in the format of #n#, n being the variable in order.
 	-- #1# is the first variable in vars, #2# the second, #3# the third, and so on.
 	-- It's also where you'd add to the info_queue, which is where things like the negative tooltip are.
-	
+
     -- loc_vars = function(self, info_queue, card)
 	-- 	return { vars = { } }
 	-- end,
@@ -123,42 +123,71 @@ SMODS.Joker {
 	end
 }
 
+-- SMODS.Joker {
+-- 	key = 'reno',
+-- 	loc_txt = {
+-- 		name = 'Renovation',
+-- 		text = {
+-- 			"If {C:attention}poker hand{} is",
+-- 			"{C:attention} Full House{},",
+-- 			"the first 3 played",
+-- 			"cards become {C:dark_edition}Foil{},",
+-- 			"{C:dark_edition}Holographic{}, and",
+-- 			"{C:dark_edition}Polychrome{}"
+-- 		}
+-- 	},
+-- 	blueprint_compat = false,
+-- 	config = { },
+-- 	rarity = 3,
+-- 	atlas = 'HooperJimbos',
+-- 	pos = { x = 3, y = 0 },
+-- 	cost = 6,
+-- 	calculate = function(self, card, context)
+-- 		if context.before and context.main_eval and not context.blueprint and next(context.poker_hands['Full House']) then
+-- 			return {
+--                 message = localize('k_upgrade_ex'),
+--                 colour = G.C.CHIPS,
+
+-- 				context.scoring_hand[1]:set_edition(poll_edition("modprefix_seed", nil, true, true)),
+-- 				context.scoring_hand[2]:set_edition('e_holo', nil, true, true),
+-- 				context.scoring_hand[3]:set_edition('e_polychrome', nil, true, true),
+-- 				G.E_MANAGER:add_event(Event({
+--                     func = function()
+--                         context.scoring_hand[1]:juice_up()
+-- 						context.scoring_hand[2]:juice_up()
+-- 						context.scoring_hand[3]:juice_up()
+--                         return true
+--                     end
+--                 }))
+--             }
+-- 		end
+-- 	end
+-- }
+
 SMODS.Joker {
 	key = 'reno',
 	loc_txt = {
 		name = 'Renovation',
 		text = {
 			"If {C:attention}poker hand{} is",
-			"{C:attention} Full House{},",
-			"the first 3 played",
-			"cards become {C:dark_edition}Foil{},",
-			"{C:dark_edition}Holographic{}, and",
-			"{C:dark_edition}Polychrome{}"
+			"{C:attention} Full House{}, destroy",
+			"the first card"
 		}
 	},
 	blueprint_compat = false,
 	config = { },
-	rarity = 3,
+	rarity = 2,
 	atlas = 'HooperJimbos',
 	pos = { x = 3, y = 0 },
-	cost = 8,
+	cost = 6,
 	calculate = function(self, card, context)
-		if context.before and context.main_eval and not context.blueprint and next(context.poker_hands['Full House']) then
+		if context.destroy_card and not context.blueprint then
+			if next(context.poker_hands['Full House']) and
+			context.destroy_card == context.scoring_hand[1] then
 			return {
-                message = localize('k_upgrade_ex'),
-                colour = G.C.CHIPS,
-				context.scoring_hand[1]:set_edition('e_foil', nil, true, true),
-				context.scoring_hand[2]:set_edition('e_holo', nil, true, true),
-				context.scoring_hand[3]:set_edition('e_polychrome', nil, true, true),
-				G.E_MANAGER:add_event(Event({
-                    func = function()
-                        context.scoring_hand[1]:juice_up()
-						context.scoring_hand[2]:juice_up()
-						context.scoring_hand[3]:juice_up()
-                        return true
-                    end
-                }))
+				remove = true
             }
+			end
 		end
 	end
 }
@@ -187,23 +216,16 @@ SMODS.Joker {
     end,
 
 	calculate = function(self, card, context)
-		if context.before and context.main_eval and not context.blueprint then
-			
-			local chips_amount = 0
-			for _, scored_card in ipairs(context.scoring_hand) do
-				if scored_card:is_suit(card.ability.extra.suit) then
-					chips_amount = chips_amount + card.ability.extra.chip_mod
-				end
-			end	
-			
-			card.ability.extra.chips = card.ability.extra.chips + chips_amount
-			
-			if chips_amount > 0 then
-				return {
-					message = localize('k_upgrade_ex'),
-					colour = G.C.CHIPS,
-				}
-			end
+		if context.individual and context.cardarea == G.play and
+		context.other_card:is_suit(card.ability.extra.suit) and not context.blueprint then
+
+			card.ability.extra.chips = card.ability.extra.chips + card.ability.extra.chip_mod
+
+			return {
+				message = localize('k_upgrade_ex'),
+				colour = G.C.CHIPS,
+				message_card = card
+			}
 		end
 
 		if context.joker_main then
@@ -270,12 +292,12 @@ SMODS.Joker {
 
 	calculate = function(self, card, context)
 		if context.discard and context.other_card:get_id() == 2 and not context.other_card.debuff and not context.blueprint then
-			
+
 			local mult_amount = 0
 			mult_amount = mult_amount + card.ability.extra.mult_mod
-			
+
 			card.ability.extra.mult = card.ability.extra.mult + mult_amount
-			
+
 			if mult_amount > 0 then
 				return {
 					message = localize('k_upgrade_ex'),
@@ -297,8 +319,8 @@ SMODS.Joker {
 	loc_txt = {
 		name = 'Energy Drink',
 		text = {
-			"Sell joker for hand",
-			"and discard"
+			"Sell this card to",
+			"temporarily gain {C:blue}+1{} hand"
 		}
 	},
 	blueprint_compat = true,
@@ -314,7 +336,7 @@ SMODS.Joker {
     end,
 
 	calculate = function(self, card, context)
-		if context.selling_self then
+		if context.selling_self and G.GAME.blind.in_blind then
 			return {
                 func = function()
                     G.E_MANAGER:add_event(Event({
@@ -337,7 +359,9 @@ SMODS.Joker {
 	loc_txt = {
 		name = 'Foundation',
 		text = {
-			"Steel cards 1.5x when scored"
+			"Played {C:attention}Steel Cards{}",
+			"each give {X:mult,C:white}X1.5{} Mult",
+			"when scored"
 		}
 	},
 	blueprint_compat = true,
@@ -367,7 +391,8 @@ SMODS.Joker {
 	loc_txt = {
 		name = 'Shooting Star',
 		text = {
-			"money for using planet"
+			"Earn {C:money}$1{} every time",
+			"a {C:planet}Planet{} card is used"
 		}
 	},
 	blueprint_compat = true,
