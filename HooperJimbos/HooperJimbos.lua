@@ -240,47 +240,98 @@ SMODS.Joker {
 
 -- =============== UNCOMMONS =============== --
 
--- Liquid Gold (Scaling xmult)
+-- Wish (Sell after 3 rounds to Upgrade most played Poker Hand)
 SMODS.Joker {
-	key = 'gold_mult',
+	key = 'wish',
 	loc_txt = {
-		name = 'Liquid Gold',
+		name = 'Wish',
 		text = {
-			"This Joker gains",
-			"{X:mult,C:white}X#2#{} Mult when a",
-			"{C:attention}Gold{} card triggers",
-			"{C:inactive} (Currently{} {X:mult,C:white}X#1#{} {C:inactive}Mult){}"
+			"After {C:attention}3{} rounds,",
+			"sell this card to",
+			"{C:attention}Upgrade{} your most",
+			"played {C:attention}poker hand{}",
+			"by {C:attention}3 levels{}",
+			"{C:inactive}(Currently {C:attention}#1#{C:inactive}/3){}"
 		}
 	},
-
-	blueprint_compat = true,
-	config = { extra = { xmult = 1, xmult_mod = 0.1 } },
+	blueprint_compat = false,
+	config = { extra = { rounds = 0 } },
 	rarity = 2,
 	atlas = 'HooperJimbos',
-	pos = { x = 0, y = 2 },
-	cost = 6,
+	pos = { x = 2, y = 2 },
+	cost = 8,
 
 	loc_vars = function(self, info_queue, card)
-        return { vars = { card.ability.extra.xmult, card.ability.extra.xmult_mod } }
-    end,
+		return { vars = { math.min(card.ability.extra.rounds, 3) } }
+	end,
 
 	calculate = function(self, card, context)
-		if context.end_of_round and context.individual and not context.blueprint then
-			if SMODS.has_enhancement(context.other_card, 'm_gold') then
-				card.ability.extra.xmult = card.ability.extra.xmult + card.ability.extra.xmult_mod
+		if context.end_of_round
+		and not context.individual
+		and not context.repetition
+		and not context.blueprint then
+			card.ability.extra.rounds = card.ability.extra.rounds + 1
+
+			if card.ability.extra.rounds == 3 then
+				juice_card_until(card, function(current_card)
+					return not current_card.REMOVED
+				end, true)
+			end
+
+			return {
+				message = card.ability.extra.rounds < 3
+					and (card.ability.extra.rounds .. '/3')
+					or localize('k_active_ex'),
+				colour = G.C.FILTER
+			}
+		end
+
+		if context.selling_self and card.ability.extra.rounds >= 3 then
+			local most_played_hand
+			local most_plays = -1
+
+			for _, hand in ipairs(G.handlist) do
+				local played = G.GAME.hands[hand].played
+				if played > most_plays then
+					most_played_hand = hand
+					most_plays = played
+				end
+			end
+
+			if most_played_hand then
+				G.E_MANAGER:add_event(Event({
+					trigger = 'after',
+					delay = 0.6,
+					func = function()
+						local hand_data = G.GAME.hands[most_played_hand]
+
+						update_hand_text(
+							{ sound = 'button', volume = 0.7, pitch = 0.8, delay = 0.3 },
+							{
+								handname = localize(most_played_hand, 'poker_hands'),
+								chips = hand_data.chips,
+								mult = hand_data.mult,
+								level = hand_data.level
+							}
+						)
+
+						level_up_hand(card, most_played_hand, nil, 3)
+
+						update_hand_text(
+							{ sound = 'button', volume = 0.7, pitch = 1.1, delay = 0 },
+							{ mult = 0, chips = 0, handname = '', level = '' }
+						)
+
+						return true
+					end
+				}))
+
 				return {
 					message = localize('k_upgrade_ex'),
-					colour = G.C.MULT,
-					message_card = card
+					colour = G.C.CHIPS
 				}
 			end
 		end
-
-		if context.joker_main then
-            return {
-                Xmult = card.ability.extra.xmult
-            }
-        end
 	end
 }
 
@@ -394,11 +445,56 @@ SMODS.Joker {
 }
 
 
--- Pressure Point
+-- Liquid Gold (Scaling xmult)
 SMODS.Joker {
-	key = 'pressure_point',
+	key = 'gold_mult',
 	loc_txt = {
-		name = 'Pressure Point',
+		name = 'Liquid Gold',
+		text = {
+			"This Joker gains",
+			"{X:mult,C:white}X#2#{} Mult when a",
+			"{C:attention}Gold{} card triggers",
+			"{C:inactive} (Currently{} {X:mult,C:white}X#1#{} {C:inactive}Mult){}"
+		}
+	},
+
+	blueprint_compat = true,
+	config = { extra = { xmult = 1, xmult_mod = 0.1 } },
+	rarity = 2,
+	atlas = 'HooperJimbos',
+	pos = { x = 0, y = 2 },
+	cost = 6,
+
+	loc_vars = function(self, info_queue, card)
+        return { vars = { card.ability.extra.xmult, card.ability.extra.xmult_mod } }
+    end,
+
+	calculate = function(self, card, context)
+		if context.end_of_round and context.individual and not context.blueprint then
+			if SMODS.has_enhancement(context.other_card, 'm_gold') then
+				card.ability.extra.xmult = card.ability.extra.xmult + card.ability.extra.xmult_mod
+				return {
+					message = localize('k_upgrade_ex'),
+					colour = G.C.MULT,
+					message_card = card
+				}
+			end
+		end
+
+		if context.joker_main then
+            return {
+                Xmult = card.ability.extra.xmult
+            }
+        end
+	end
+}
+
+
+-- Anvil (Enhancement on First Scored Card of Last Hand)
+SMODS.Joker {
+	key = 'anvil',
+	loc_txt = {
+		name = 'Anvil',
 		text = {
 			"When {C:attention}last hand{} of round",
 			"is played, give the",
@@ -410,7 +506,7 @@ SMODS.Joker {
 	config = { },
 	rarity = 2,
 	atlas = 'HooperJimbos',
-	pos = { x = 5, y = 2 },
+	pos = { x = 1, y = 0 },
 	cost = 7,
 	calculate = function(self, card, context)
 		if context.before and not context.blueprint
@@ -418,7 +514,7 @@ SMODS.Joker {
 			and context.scoring_hand and context.scoring_hand[1] then
 			local scored_card = context.scoring_hand[1]
 			local enhancement = SMODS.poll_enhancement({
-				key = 'pressure_point',
+				key = 'anvil',
 				guaranteed = true
 			})
 
@@ -455,7 +551,7 @@ SMODS.Joker {
 	config = { extra = { dollars = 3, dollars_mod = 1 } },
 	rarity = 2,
 	atlas = 'HooperJimbos',
-	pos = { x = 5, y = 2 },
+	pos = { x = 1, y = 2 },
 	cost = 6,
 	loc_vars = function(self, info_queue, card)
 		return { vars = { card.ability.extra.dollars } }
@@ -486,100 +582,7 @@ SMODS.Joker {
 	end
 }
 
--- Wish (Sell after 3 rounds to Upgrade most played Poker Hand)
-SMODS.Joker {
-	key = 'wish',
-	loc_txt = {
-		name = 'Wish',
-		text = {
-			"After {C:attention}3{} rounds,",
-			"sell this card to",
-			"{C:attention}Upgrade{} your most",
-			"played {C:attention}poker hand{}",
-			"by {C:attention}3 levels{}",
-			"{C:inactive}(Currently {C:attention}#1#{C:inactive}/3){}"
-		}
-	},
-	blueprint_compat = false,
-	config = { extra = { rounds = 0 } },
-	rarity = 2,
-	atlas = 'HooperJimbos',
-	pos = { x = 5, y = 2 },
-	cost = 8,
 
-	loc_vars = function(self, info_queue, card)
-		return { vars = { math.min(card.ability.extra.rounds, 3) } }
-	end,
-
-	calculate = function(self, card, context)
-		if context.end_of_round
-		and not context.individual
-		and not context.repetition
-		and not context.blueprint then
-			card.ability.extra.rounds = card.ability.extra.rounds + 1
-
-			if card.ability.extra.rounds == 3 then
-				juice_card_until(card, function(current_card)
-					return not current_card.REMOVED
-				end, true)
-			end
-
-			return {
-				message = card.ability.extra.rounds < 3
-					and (card.ability.extra.rounds .. '/3')
-					or localize('k_active_ex'),
-				colour = G.C.FILTER
-			}
-		end
-
-		if context.selling_self and card.ability.extra.rounds >= 3 then
-			local most_played_hand
-			local most_plays = -1
-
-			for _, hand in ipairs(G.handlist) do
-				local played = G.GAME.hands[hand].played
-				if played > most_plays then
-					most_played_hand = hand
-					most_plays = played
-				end
-			end
-
-			if most_played_hand then
-				G.E_MANAGER:add_event(Event({
-					trigger = 'after',
-					delay = 0.6,
-					func = function()
-						local hand_data = G.GAME.hands[most_played_hand]
-
-						update_hand_text(
-							{ sound = 'button', volume = 0.7, pitch = 0.8, delay = 0.3 },
-							{
-								handname = localize(most_played_hand, 'poker_hands'),
-								chips = hand_data.chips,
-								mult = hand_data.mult,
-								level = hand_data.level
-							}
-						)
-
-						level_up_hand(card, most_played_hand, nil, 3)
-
-						update_hand_text(
-							{ sound = 'button', volume = 0.7, pitch = 1.1, delay = 0 },
-							{ mult = 0, chips = 0, handname = '', level = '' }
-						)
-
-						return true
-					end
-				}))
-
-				return {
-					message = localize('k_upgrade_ex'),
-					colour = G.C.CHIPS
-				}
-			end
-		end
-	end
-}
 -- =============== RARES =============== --
 
 -- Binary Satellites (Retrigger Planet Cards)
@@ -663,7 +666,7 @@ SMODS.Joker {
 	config = { extra = { } },
 	rarity = 3,
 	atlas = 'HooperJimbos',
-	pos = { x = 5, y = 2 },
+	pos = { x = 3, y = 2 },
 	cost = 8,
 }
 
@@ -689,7 +692,7 @@ SMODS.Joker {
 	},
 	rarity = 3,
 	atlas = 'HooperJimbos',
-	pos = { x = 5, y = 2 },
+	pos = { x = 4, y = 2 },
 	cost = 8,
 
 	loc_vars = function(self, info_queue, card)
