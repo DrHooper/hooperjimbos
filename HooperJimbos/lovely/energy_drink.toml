@@ -1,0 +1,33 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = "return generate_card_ui(self.config.center, nil, loc_vars, card_type, badges, hide_desc, main_start, main_end, self)"
+position = "before"
+match_indent = true
+payload = '''
+if self.ability.set == "Joker"
+    and self.area == G.jokers
+    and self.config.center.key:lower() == "j_hooperjokers_energy_drink" then
+    local active = G.GAME and G.GAME.blind and G.GAME.blind.in_blind
+    main_end = {
+        {n=G.UIT.C, config={align="bm", minh=0.4}, nodes={
+            {n=G.UIT.C, config={
+                align="m",
+                colour=active and G.C.GREEN or G.C.RED,
+                r=0.05,
+                padding=0.06
+            }, nodes={
+                {n=G.UIT.T, config={
+                    text=active and " active " or " inactive ",
+                    colour=G.C.UI.TEXT_LIGHT,
+                    scale=0.32*0.9
+                }}
+            }}
+        }}
+    }
+end
+'''
